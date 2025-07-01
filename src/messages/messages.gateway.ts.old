@@ -1,0 +1,132 @@
+import {
+    MessageBody,
+    SubscribeMessage,
+    WebSocketGateway,
+    WebSocketServer,
+} from '@nestjs/websockets';
+import { Server } from 'socket.io';
+import { ConversationsService } from 'src/conversations/conversations.service';
+import { MessagesService } from './messages.service';
+import { RabbitmqService } from '../rabbitmq/rabbitmq.service';
+
+@WebSocketGateway({
+    cors: {
+        origin: '*',
+    },
+})
+export class MessagesGateway {
+    @WebSocketServer()
+    server: Server;
+
+    constructor(
+        private readonly messagesService: MessagesService,
+        private readonly conversationsService: ConversationsService,
+        private readonly rabbitmqService: RabbitmqService
+    ) {}
+
+    @SubscribeMessage('send_message')
+    async receiveMessage(
+        @MessageBody()
+        data: {
+            content: string;
+            conversationId: number;
+            userId: number;
+        }
+    ) {
+        try {
+            // Créer le message en base de données
+            const message = await this.messagesService.createMessage({
+                content: data.content,
+                conversation: { connect: { id: data.conversationId } },
+                user: { connect: { id: data.userId } },
+            });
+
+            // Récupérer les participants de la conversation
+            const participants =
+                await this.conversationsService.getConversationsParticipants(
+                    data.conversationId
+                );
+
+            // Créer l'événement pour RabbitMQ (le message inclut déjà user et conversation grâce au service)
+            const messageEvent = {
+                id: message.id,
+                content: message.content,
+                conversationId: (message as any).conversationId,
+                userId: (message as any).userId,
+                createdAt: message.createdAt,
+                updatedAt: message.updatedAt,
+                user: (message as any).user,
+                conversation: {
+                    id: data.conversationId,
+                    participants: participants,
+                },
+            };
+
+            // Envoyer à RabbitMQ au lieu d'envoyer directement via WebSocket
+            await this.rabbitmqService.sendMessage(messageEvent);
+
+            console.log('Message sent to RabbitMQ for processing:', message.id);
+        } catch (error) {
+            console.error('Error processing message:', error);
+        }
+    }
+
+    @SubscribeMessage('update_message')
+    async updateMessage(
+        @MessageBody()
+        data: {
+            messageId: number;
+            content: string;
+            userId: number;
+        }
+    ) {
+        try {
+            const updatedMessage = await this.messagesService.updateMessage({
+                where: { id: data.messageId },
+                data: { content: data.content },
+            });
+
+            const messageUpdateEvent = {
+                messageId: data.messageId,
+                content: data.content,
+                conversationId: (updatedMessage as any).conversationId,
+                userId: data.userId,
+            };
+
+            // Envoyer à RabbitMQ
+            await this.rabbitmqService.sendMessageUpdate(messageUpdateEvent);
+
+            console.log('Message update sent to RabbitMQ:', data.messageId);
+        } catch (error) {
+            console.error('Error updating message:', error);
+        }
+    }
+
+    @SubscribeMessage('delete_message')
+    async deleteMessage(
+        @MessageBody()
+        data: {
+            messageId: number;
+            userId: number;
+        }
+    ) {
+        try {
+            const deletedMessage = await this.messagesService.deleteMessage({
+                id: data.messageId,
+            });
+
+            const messageDeleteEvent = {
+                messageId: data.messageId,
+                conversationId: (deletedMessage as any).conversationId,
+                userId: data.userId,
+            };
+
+            // Envoyer à RabbitMQ
+            await this.rabbitmqService.sendMessageDelete(messageDeleteEvent);
+
+            console.log('Message delete sent to RabbitMQ:', data.messageId);
+        } catch (error) {
+            console.error('Error deleting message:', error);
+        }
+    }
+}

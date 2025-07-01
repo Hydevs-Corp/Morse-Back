@@ -1,0 +1,233 @@
+config:
+    target: 'http://localhost:3000'
+    phases:
+        # Ramp-up phase: gradually increase load
+        - duration: 60
+          arrivalRate: 1
+          rampTo: 10
+          name: 'Ramp up'
+
+        # Sustained load phase
+        - duration: 120
+          arrivalRate: 10
+          name: 'Sustained load'
+
+        # Spike test
+        - duration: 30
+          arrivalRate: 50
+          name: 'Spike test'
+
+        # Cool down
+        - duration: 60
+          arrivalRate: 10
+          rampTo: 1
+          name: 'Cool down'
+
+    payload:
+        path: './test-data.csv'
+        fields:
+            - email
+            - password
+            - name
+
+    plugins:
+        metrics-by-endpoint:
+            useOnlyRequestNames: true
+
+    processor: './artillery-processor.js'
+
+scenarios:
+    # Test authentication performance
+    - name: 'Authentication Flow'
+      weight: 20
+      flow:
+          - post:
+                url: '/graphql'
+                headers:
+                    Content-Type: 'application/json'
+                json:
+                    query: |
+                        mutation Signup($email: String!, $password: String!, $name: String!) {
+                          signup(email: $email, password: $password, name: $name) {
+                            user { id email name }
+                            token
+                          }
+                        }
+                    variables:
+                        email: '{{ email }}'
+                        password: '{{ password }}'
+                        name: '{{ name }}'
+                capture:
+                    - json: '$.data.signup.token'
+                      as: 'authToken'
+                    - json: '$.data.signup.user.id'
+                      as: 'userId'
+                expect:
+                    - statusCode: 200
+                    - hasProperty: 'data.signup.token'
+
+    # Test message sending performance
+    - name: 'Send Message Performance'
+      weight: 50
+      flow:
+          # First authenticate
+          - post:
+                url: '/graphql'
+                headers:
+                    Content-Type: 'application/json'
+                json:
+                    query: |
+                        mutation Signin($email: String!, $password: String!) {
+                          signin(email: $email, password: $password)
+                        }
+                    variables:
+                        email: 'test@example.com'
+                        password: 'testpassword123'
+                capture:
+                    - json: '$'
+                      as: 'authResponse'
+
+          # Create a conversation
+          - post:
+                url: '/graphql'
+                headers:
+                    Content-Type: 'application/json'
+                    Authorization: 'Bearer {{ authToken }}'
+                json:
+                    query: |
+                        mutation CreateConversation($participantIds: [Int!]!) {
+                          createConversation(participantIds: $participantIds) {
+                            id
+                          }
+                        }
+                    variables:
+                        participantIds: [1, 2]
+                capture:
+                    - json: '$.data.createConversation.id'
+                      as: 'conversationId'
+
+          # Send multiple messages
+          - loop:
+                count: 5
+                over:
+                    - post:
+                          url: '/graphql'
+                          name: 'sendMessage'
+                          headers:
+                              Content-Type: 'application/json'
+                              Authorization: 'Bearer {{ authToken }}'
+                          json:
+                              query: |
+                                  mutation SendMessage($conversationId: Int!, $content: String!) {
+                                    sendMessage(conversationId: $conversationId, content: $content) {
+                                      id
+                                      content
+                                      createdAt
+                                    }
+                                  }
+                              variables:
+                                  conversationId: '{{ conversationId }}'
+                                  content: 'Performance test message {{ $randomString() }}'
+                          expect:
+                              - statusCode: 200
+                              - hasProperty: 'data.sendMessage.id'
+
+    # Test message retrieval performance
+    - name: 'Message Retrieval Performance'
+      weight: 30
+      flow:
+          - post:
+                url: '/graphql'
+                name: 'getMessages'
+                headers:
+                    Content-Type: 'application/json'
+                    Authorization: 'Bearer {{ authToken }}'
+                json:
+                    query: |
+                        query GetMessages {
+                          messages {
+                            id
+                            content
+                            user {
+                              id
+                              email
+                            }
+                            createdAt
+                          }
+                        }
+                expect:
+                    - statusCode: 200
+                    - hasProperty: 'data.messages'
+
+          - post:
+                url: '/graphql'
+                name: 'getConversations'
+                headers:
+                    Content-Type: 'application/json'
+                    Authorization: 'Bearer {{ authToken }}'
+                json:
+                    query: |
+                        query GetConversations {
+                          conversations {
+                            id
+                            participants {
+                              id
+                              email
+                            }
+                            messages {
+                              id
+                              content
+                            }
+                          }
+                        }
+                expect:
+                    - statusCode: 200
+                    - hasProperty: 'data.conversations'
+
+    # Error handling scenarios
+    - name: 'Error Handling Tests'
+      weight: 10
+      flow:
+          # Test invalid authentication
+          - post:
+                url: '/graphql'
+                name: 'invalidAuth'
+                headers:
+                    Content-Type: 'application/json'
+                    Authorization: 'Bearer invalid-token'
+                json:
+                    query: |
+                        mutation SendMessage($conversationId: Int!, $content: String!) {
+                          sendMessage(conversationId: $conversationId, content: $content) {
+                            id
+                            content
+                          }
+                        }
+                    variables:
+                        conversationId: 1
+                        content: 'This should fail'
+                expect:
+                    - statusCode: 200
+                    - hasProperty: 'errors'
+
+          # Test invalid conversation ID
+          - post:
+                url: '/graphql'
+                name: 'invalidConversation'
+                headers:
+                    Content-Type: 'application/json'
+                    Authorization: 'Bearer {{ authToken }}'
+                json:
+                    query: |
+                        mutation SendMessage($conversationId: Int!, $content: String!) {
+                          sendMessage(conversationId: $conversationId, content: $content) {
+                            id
+                            content
+                          }
+                        }
+                    variables:
+                        conversationId: 99999
+                        content: 'Invalid conversation test'
+                expect:
+                    - statusCode: 200
+                    - hasProperty: 'errors'

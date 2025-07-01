@@ -1,0 +1,93 @@
+import {
+    ConnectedSocket,
+    MessageBody,
+    OnGatewayConnection,
+    OnGatewayDisconnect,
+    SubscribeMessage,
+    WebSocketGateway,
+    WebSocketServer,
+} from '@nestjs/websockets';
+import { Server, Socket } from 'socket.io';
+
+interface OnlineClient {
+    socketId: string[];
+    userId: string;
+    lastConnection?: Date;
+}
+
+@WebSocketGateway({
+    cors: {
+        origin: '*',
+    },
+})
+export class UserGateway implements OnGatewayDisconnect {
+    @WebSocketServer()
+    server: Server;
+    onlineClients: OnlineClient[] = [];
+
+    constructor() {
+        setInterval(() => {
+            // console.clear();
+            // console.log('Online clients:', this.onlineClients);
+        }, 1_000);
+    }
+
+    @SubscribeMessage('connectionIAM')
+    handleConnectionIAM(
+        @ConnectedSocket() client: Socket,
+        @MessageBody() userId: string
+    ) {
+        console.log('Client connected:', client.id, 'User ID:', userId);
+
+        if (this.onlineClients.some(c => c.userId === userId)) {
+            this.onlineClients = this.onlineClients.map(c => {
+                if (c.userId === userId) {
+                    c.socketId.push(client.id);
+                    c.lastConnection = new Date();
+                }
+                return c;
+            });
+            return;
+        }
+        this.onlineClients.push({
+            socketId: [client.id],
+            userId: userId,
+            lastConnection: new Date(),
+        });
+        this.server.emit('IAM_refresh', {
+            ack: true,
+            online: this.onlineClients,
+        });
+    }
+
+    handleDisconnect(client: any) {
+        // find the client in the onlineClients array
+        const clientIndex = this.onlineClients.findIndex(c =>
+            c.socketId.includes(client.id)
+        );
+
+        // remove the client from the onlineClients array based on the socketId
+        if (clientIndex !== -1) {
+            const clientData = this.onlineClients[clientIndex];
+            clientData.socketId = clientData.socketId.filter(
+                socketId => socketId !== client.id
+            );
+
+            // If no more socket IDs, remove the client from the list
+            if (clientData.socketId.length === 0) {
+                this.onlineClients.splice(clientIndex, 1);
+            } else {
+                // Update last connection time
+                clientData.lastConnection = new Date();
+            }
+        }
+
+        // this.onlineClients = this.onlineClients.filter(
+        //     c => !c.socketId.includes(client.id) || c.socketId.length === 0
+        // );
+        this.server.emit('IAM_refresh', {
+            ack: true,
+            online: this.onlineClients,
+        });
+    }
+}

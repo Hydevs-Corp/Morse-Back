@@ -1,0 +1,559 @@
+{
+    "info": {
+        "name": "Morse App GraphQL API Tests",
+        "description": "Collection de tests pour l'API GraphQL de l'application Morse",
+        "version": "1.0.0",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    },
+    "auth": {
+        "type": "bearer",
+        "bearer": [
+            {
+                "key": "token",
+                "value": "{{authToken}}",
+                "type": "string"
+            }
+        ]
+    },
+    "event": [
+        {
+            "listen": "prerequest",
+            "script": {
+                "type": "text/javascript",
+                "exec": [
+                    "// Set base URL",
+                    "pm.globals.set('baseUrl', 'http://localhost:3000');"
+                ]
+            }
+        }
+    ],
+    "variable": [
+        {
+            "key": "baseUrl",
+            "value": "http://localhost:3000"
+        },
+        {
+            "key": "authToken",
+            "value": ""
+        },
+        {
+            "key": "userId",
+            "value": ""
+        },
+        {
+            "key": "conversationId",
+            "value": ""
+        },
+        {
+            "key": "messageId",
+            "value": ""
+        }
+    ],
+    "item": [
+        {
+            "name": "Authentication",
+            "item": [
+                {
+                    "name": "Signup",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "pm.test('Status code is 200', function () {",
+                                    "    pm.response.to.have.status(200);",
+                                    "});",
+                                    "",
+                                    "pm.test('Response contains user and token', function () {",
+                                    "    const responseJson = pm.response.json();",
+                                    "    pm.expect(responseJson.data.signup).to.have.property('user');",
+                                    "    pm.expect(responseJson.data.signup).to.have.property('token');",
+                                    "    ",
+                                    "    // Store token and user ID for future requests",
+                                    "    pm.collectionVariables.set('authToken', responseJson.data.signup.token);",
+                                    "    pm.collectionVariables.set('userId', responseJson.data.signup.user.id);",
+                                    "});",
+                                    "",
+                                    "pm.test('User has correct email format', function () {",
+                                    "    const responseJson = pm.response.json();",
+                                    "    pm.expect(responseJson.data.signup.user.email).to.match(/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/);",
+                                    "});",
+                                    "",
+                                    "pm.test('Response time is less than 2000ms', function () {",
+                                    "    pm.expect(pm.response.responseTime).to.be.below(2000);",
+                                    "});"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"query\": \"mutation Signup($email: String!, $password: String!, $name: String!) { signup(email: $email, password: $password, name: $name) { user { id email name } token } }\",\n    \"variables\": {\n        \"email\": \"test{{$timestamp}}@example.com\",\n        \"password\": \"testpassword123\",\n        \"name\": \"Test User\"\n    }\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/graphql",
+                            "host": ["{{baseUrl}}"],
+                            "path": ["graphql"]
+                        }
+                    }
+                },
+                {
+                    "name": "Signin",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "pm.test('Status code is 200', function () {",
+                                    "    pm.response.to.have.status(200);",
+                                    "});",
+                                    "",
+                                    "pm.test('Login successful', function () {",
+                                    "    const responseJson = pm.response.json();",
+                                    "    pm.expect(responseJson.data.signin).to.exist;",
+                                    "});",
+                                    "",
+                                    "pm.test('Response time is acceptable', function () {",
+                                    "    pm.expect(pm.response.responseTime).to.be.below(1500);",
+                                    "});"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"query\": \"mutation Signin($email: String!, $password: String!) { signin(email: $email, password: $password) }\",\n    \"variables\": {\n        \"email\": \"test@example.com\",\n        \"password\": \"testpassword123\"\n    }\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/graphql",
+                            "host": ["{{baseUrl}}"],
+                            "path": ["graphql"]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Messages",
+            "item": [
+                {
+                    "name": "Send Message",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "pm.test('Status code is 200', function () {",
+                                    "    pm.response.to.have.status(200);",
+                                    "});",
+                                    "",
+                                    "pm.test('Message created successfully', function () {",
+                                    "    const responseJson = pm.response.json();",
+                                    "    pm.expect(responseJson.data.sendMessage).to.exist;",
+                                    "    pm.expect(responseJson.data.sendMessage.id).to.exist;",
+                                    "    pm.expect(responseJson.data.sendMessage.content).to.equal('Hello from Postman test!');",
+                                    "    ",
+                                    "    // Store message ID for future tests",
+                                    "    pm.collectionVariables.set('messageId', responseJson.data.sendMessage.id);",
+                                    "});",
+                                    "",
+                                    "pm.test('Message has user information', function () {",
+                                    "    const responseJson = pm.response.json();",
+                                    "    pm.expect(responseJson.data.sendMessage.user).to.exist;",
+                                    "    pm.expect(responseJson.data.sendMessage.user.id).to.exist;",
+                                    "    pm.expect(responseJson.data.sendMessage.user.email).to.exist;",
+                                    "});",
+                                    "",
+                                    "pm.test('Response time is under 1 second', function () {",
+                                    "    pm.expect(pm.response.responseTime).to.be.below(1000);",
+                                    "});",
+                                    "",
+                                    "pm.test('No GraphQL errors', function () {",
+                                    "    const responseJson = pm.response.json();",
+                                    "    pm.expect(responseJson.errors).to.be.undefined;",
+                                    "});"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"query\": \"mutation SendMessage($conversationId: Int!, $content: String!) { sendMessage(conversationId: $conversationId, content: $content) { id content user { id email } createdAt } }\",\n    \"variables\": {\n        \"conversationId\": {{conversationId}},\n        \"content\": \"Hello from Postman test!\"\n    }\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/graphql",
+                            "host": ["{{baseUrl}}"],
+                            "path": ["graphql"]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Messages",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "pm.test('Status code is 200', function () {",
+                                    "    pm.response.to.have.status(200);",
+                                    "});",
+                                    "",
+                                    "pm.test('Messages array returned', function () {",
+                                    "    const responseJson = pm.response.json();",
+                                    "    pm.expect(responseJson.data.messages).to.be.an('array');",
+                                    "});",
+                                    "",
+                                    "pm.test('Each message has required fields', function () {",
+                                    "    const responseJson = pm.response.json();",
+                                    "    if (responseJson.data.messages.length > 0) {",
+                                    "        const message = responseJson.data.messages[0];",
+                                    "        pm.expect(message).to.have.property('id');",
+                                    "        pm.expect(message).to.have.property('content');",
+                                    "        pm.expect(message).to.have.property('user');",
+                                    "        pm.expect(message).to.have.property('createdAt');",
+                                    "    }",
+                                    "});",
+                                    "",
+                                    "pm.test('Response time is reasonable', function () {",
+                                    "    pm.expect(pm.response.responseTime).to.be.below(2000);",
+                                    "});"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"query\": \"query GetMessages { messages { id content user { id email } createdAt } }\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/graphql",
+                            "host": ["{{baseUrl}}"],
+                            "path": ["graphql"]
+                        }
+                    }
+                },
+                {
+                    "name": "Update Message",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "pm.test('Status code is 200', function () {",
+                                    "    pm.response.to.have.status(200);",
+                                    "});",
+                                    "",
+                                    "pm.test('Message updated successfully', function () {",
+                                    "    const responseJson = pm.response.json();",
+                                    "    pm.expect(responseJson.data.updateMessage).to.exist;",
+                                    "    pm.expect(responseJson.data.updateMessage.content).to.equal('Updated message content');",
+                                    "});",
+                                    "",
+                                    "pm.test('Response time is acceptable', function () {",
+                                    "    pm.expect(pm.response.responseTime).to.be.below(1000);",
+                                    "});"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"query\": \"mutation UpdateMessage($messageId: Int!, $content: String!) { updateMessage(messageId: $messageId, content: $content) { id content updatedAt } }\",\n    \"variables\": {\n        \"messageId\": {{messageId}},\n        \"content\": \"Updated message content\"\n    }\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/graphql",
+                            "host": ["{{baseUrl}}"],
+                            "path": ["graphql"]
+                        }
+                    }
+                },
+                {
+                    "name": "Delete Message",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "pm.test('Status code is 200', function () {",
+                                    "    pm.response.to.have.status(200);",
+                                    "});",
+                                    "",
+                                    "pm.test('Message deleted successfully', function () {",
+                                    "    const responseJson = pm.response.json();",
+                                    "    pm.expect(responseJson.data.deleteMessage).to.be.true;",
+                                    "});",
+                                    "",
+                                    "pm.test('Response time is fast', function () {",
+                                    "    pm.expect(pm.response.responseTime).to.be.below(500);",
+                                    "});"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"query\": \"mutation DeleteMessage($messageId: Int!) { deleteMessage(messageId: $messageId) }\",\n    \"variables\": {\n        \"messageId\": {{messageId}}\n    }\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/graphql",
+                            "host": ["{{baseUrl}}"],
+                            "path": ["graphql"]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Performance Tests",
+            "item": [
+                {
+                    "name": "Send Message - Performance",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "pm.test('Response time under 500ms', function () {",
+                                    "    pm.expect(pm.response.responseTime).to.be.below(500);",
+                                    "});",
+                                    "",
+                                    "pm.test('Message created successfully', function () {",
+                                    "    const responseJson = pm.response.json();",
+                                    "    pm.expect(responseJson.data.sendMessage).to.exist;",
+                                    "});",
+                                    "",
+                                    "// Log response time for monitoring",
+                                    "console.log('SendMessage response time: ' + pm.response.responseTime + 'ms');"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"query\": \"mutation SendMessage($conversationId: Int!, $content: String!) { sendMessage(conversationId: $conversationId, content: $content) { id content createdAt } }\",\n    \"variables\": {\n        \"conversationId\": {{conversationId}},\n        \"content\": \"Performance test message {{$timestamp}}\"\n    }\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/graphql",
+                            "host": ["{{baseUrl}}"],
+                            "path": ["graphql"]
+                        }
+                    }
+                },
+                {
+                    "name": "Bulk Message Creation",
+                    "event": [
+                        {
+                            "listen": "prerequest",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "// Set iteration counter",
+                                    "pm.globals.set('iteration', pm.globals.get('iteration') || 0);",
+                                    "pm.globals.set('iteration', parseInt(pm.globals.get('iteration')) + 1);"
+                                ]
+                            }
+                        },
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "pm.test('Bulk message creation successful', function () {",
+                                    "    pm.response.to.have.status(200);",
+                                    "    const responseJson = pm.response.json();",
+                                    "    pm.expect(responseJson.data.sendMessage).to.exist;",
+                                    "});",
+                                    "",
+                                    "pm.test('Response time under 1 second', function () {",
+                                    "    pm.expect(pm.response.responseTime).to.be.below(1000);",
+                                    "});",
+                                    "",
+                                    "// Track average response time",
+                                    "const iteration = pm.globals.get('iteration');",
+                                    "const currentTime = pm.response.responseTime;",
+                                    "const totalTime = (pm.globals.get('totalTime') || 0) + currentTime;",
+                                    "const avgTime = totalTime / iteration;",
+                                    "",
+                                    "pm.globals.set('totalTime', totalTime);",
+                                    "console.log(`Iteration ${iteration}: ${currentTime}ms (avg: ${avgTime.toFixed(2)}ms)`);"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"query\": \"mutation SendMessage($conversationId: Int!, $content: String!) { sendMessage(conversationId: $conversationId, content: $content) { id content } }\",\n    \"variables\": {\n        \"conversationId\": {{conversationId}},\n        \"content\": \"Bulk test message #{{$guid}}\"\n    }\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/graphql",
+                            "host": ["{{baseUrl}}"],
+                            "path": ["graphql"]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Error Handling",
+            "item": [
+                {
+                    "name": "Send Message - Invalid Conversation",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "pm.test('Status code is 200 (GraphQL errors in response)', function () {",
+                                    "    pm.response.to.have.status(200);",
+                                    "});",
+                                    "",
+                                    "pm.test('GraphQL error returned for invalid conversation', function () {",
+                                    "    const responseJson = pm.response.json();",
+                                    "    pm.expect(responseJson.errors).to.exist;",
+                                    "    pm.expect(responseJson.errors.length).to.be.greaterThan(0);",
+                                    "});",
+                                    "",
+                                    "pm.test('Error message is descriptive', function () {",
+                                    "    const responseJson = pm.response.json();",
+                                    "    const errorMessage = responseJson.errors[0].message.toLowerCase();",
+                                    "    pm.expect(errorMessage).to.include('conversation');",
+                                    "});"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"query\": \"mutation SendMessage($conversationId: Int!, $content: String!) { sendMessage(conversationId: $conversationId, content: $content) { id content } }\",\n    \"variables\": {\n        \"conversationId\": 99999,\n        \"content\": \"This should fail\"\n    }\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/graphql",
+                            "host": ["{{baseUrl}}"],
+                            "path": ["graphql"]
+                        }
+                    }
+                },
+                {
+                    "name": "Unauthorized Request",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "pm.test('Returns unauthorized error', function () {",
+                                    "    const responseJson = pm.response.json();",
+                                    "    pm.expect(responseJson.errors).to.exist;",
+                                    "    const errorMessage = responseJson.errors[0].message.toLowerCase();",
+                                    "    pm.expect(errorMessage).to.include('unauthorized');",
+                                    "});"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "auth": {
+                            "type": "noauth"
+                        },
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"query\": \"mutation SendMessage($conversationId: Int!, $content: String!) { sendMessage(conversationId: $conversationId, content: $content) { id content } }\",\n    \"variables\": {\n        \"conversationId\": 1,\n        \"content\": \"This should be unauthorized\"\n    }\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/graphql",
+                            "host": ["{{baseUrl}}"],
+                            "path": ["graphql"]
+                        }
+                    }
+                }
+            ]
+        }
+    ]
+}

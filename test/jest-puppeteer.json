@@ -1,0 +1,9 @@
+{
+    "preset": "jest-puppeteer",
+    "testEnvironment": "node",
+    "testMatch": ["**/test/**/puppeteer-*.spec.js"],
+    "setupFilesAfterEnv": ["./puppeteer-setup.js"],
+    "testTimeout": 30000,
+    "verbose": true,
+    "collectCoverage": false
+}

@@ -1,0 +1,58 @@
+version: '3.8'
+
+services:
+    rabbitmq:
+        image: rabbitmq:3-management
+        container_name: morse-rabbitmq
+        ports:
+            - '5672:5672' # AMQP port
+            - '15672:15672' # Management UI port
+        environment:
+            RABBITMQ_DEFAULT_USER: admin
+            RABBITMQ_DEFAULT_PASS: admin123
+        volumes:
+            - rabbitmq_data:/var/lib/rabbitmq
+        networks:
+            - morse-network
+        restart: unless-stopped
+        healthcheck:
+            test: ['CMD', 'rabbitmq-diagnostics', '-q', 'ping']
+            interval: 30s
+            timeout: 30s
+            retries: 3
+
+    morse-front:
+        image: morse-front:latest
+        container_name: morse-front
+        ports:
+            - '80:80'
+        depends_on:
+            - rabbitmq
+            - morse-back
+        environment:
+            REACT_APP_RABBITMQ_URL: 'amqp://admin:admin123@rabbitmq:5672'
+        networks:
+            - morse-network
+
+    morse-back:
+        build:
+            context: .
+            dockerfile: Dockerfile
+        container_name: morse-back
+        ports:
+            - '3000:3000'
+        depends_on:
+            - rabbitmq
+        environment:
+            RABBITMQ_URL: 'amqp://admin:admin123@rabbitmq:5672'
+            DATABASE_URL: 'postgresql://user:password@db:5432/morse'
+        restart: unless-stopped
+        networks:
+            - morse-network
+
+volumes:
+    rabbitmq_data:
+
+networks:
+    morse-network:
+        driver: bridge
