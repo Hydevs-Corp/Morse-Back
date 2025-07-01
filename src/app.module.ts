@@ -10,32 +10,40 @@ import { ConversationsModule } from './conversations/conversations.module';
 import { MessagesModule } from './messages/messages.module';
 import { RabbitmqModule } from './rabbitmq/rabbitmq.module';
 import { PubSubModule } from './pubsub/pubsub.module';
+import { ContextModule } from './context/context.module';
+import { ContextService } from './context/context.service';
 
 @Module({
     imports: [
         ConfigModule.forRoot(),
         PubSubModule,
+        ContextModule,
         AuthModule,
         UsersModule,
         ConversationsModule,
         MessagesModule,
         RabbitmqModule,
-        GraphQLModule.forRoot<ApolloDriverConfig>({
+        GraphQLModule.forRootAsync<ApolloDriverConfig>({
             driver: ApolloDriver,
-            graphiql: true,
-            autoSchemaFile: true,
-            sortSchema: true,
-            subscriptions: {
-                'graphql-ws': true,
-            },
-            context: ({ req, connection }) => {
-                if (connection) {
-                    // For subscriptions
-                    return { req: connection.context };
-                }
-                // For queries and mutations
-                return { req };
-            },
+            imports: [ContextModule],
+            inject: [ContextService],
+            useFactory: (contextService: ContextService) => ({
+                graphiql: true,
+                autoSchemaFile: true,
+                sortSchema: true,
+                subscriptions: {
+                    'graphql-ws': true,
+                },
+                context: ({
+                    req,
+                    connection,
+                }: {
+                    req?: any;
+                    connection?: any;
+                }) => {
+                    return contextService.createContext({ req, connection });
+                },
+            }),
         }),
     ],
     controllers: [AppController],

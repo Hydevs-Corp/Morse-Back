@@ -7,6 +7,7 @@ import {
     ResolveField,
     Parent,
     Subscription,
+    Context,
 } from '@nestjs/graphql';
 import { UseGuards } from '@nestjs/common';
 import { MessagesService } from './messages.service';
@@ -20,6 +21,7 @@ import { RabbitmqService } from '../rabbitmq/rabbitmq.service';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { GqlAuthGuard } from '../auth/gql-auth.guard';
 import { ObjectType, Field } from '@nestjs/graphql';
+import { GraphQLContext } from '../context/context.service';
 
 @ObjectType()
 class MessageUpdatePayload {
@@ -217,7 +219,10 @@ export class MessagesResolver {
     }
 
     @ResolveField(() => Conversation)
-    async conversation(@Parent() message: Message) {
+    async conversation(
+        @Parent() message: Message,
+        @Context() context: GraphQLContext
+    ) {
         const conversationId =
             (message as any).conversationId ?? message.conversation?.id;
 
@@ -227,20 +232,16 @@ export class MessagesResolver {
                 ? parseInt(conversationId, 10)
                 : conversationId;
 
-        return this.prisma.conversation.findUnique({
-            where: { id },
-        });
+        return context.loaders.conversationLoader.load(id);
     }
 
     @ResolveField(() => User)
-    async user(@Parent() message: Message) {
+    async user(@Parent() message: Message, @Context() context: GraphQLContext) {
         const userId = (message as any).userId ?? message.user?.id;
 
         // Ensure userId is a number for Prisma
         const id = typeof userId === 'string' ? parseInt(userId, 10) : userId;
 
-        return this.prisma.user.findUnique({
-            where: { id },
-        });
+        return context.loaders.userLoader.load(id);
     }
 }

@@ -7,6 +7,7 @@ import {
     ResolveField,
     Parent,
     Subscription,
+    Context,
 } from '@nestjs/graphql';
 import { UseGuards } from '@nestjs/common';
 import { UsersService } from './users.service';
@@ -22,6 +23,7 @@ import { Conversation } from '../conversations/conversation.model';
 import { Message } from '../messages/message.model';
 import { PubSubService } from '../pubsub/pubsub.service';
 import { ObjectType, Field } from '@nestjs/graphql';
+import { GraphQLContext } from '../context/context.service';
 
 @ObjectType()
 class OnlineUser {
@@ -143,20 +145,15 @@ export class UsersResolver {
     }
 
     @ResolveField(() => [Conversation])
-    async conversations(@Parent() user: User) {
-        return this.prisma.conversation.findMany({
-            where: {
-                participants: {
-                    some: { id: user.id },
-                },
-            },
-        });
+    async conversations(
+        @Parent() user: User,
+        @Context() context: GraphQLContext
+    ) {
+        return context.loaders.conversationsByUserLoader.load(user.id);
     }
 
     @ResolveField(() => [Message])
-    async messages(@Parent() user: User) {
-        return this.prisma.message.findMany({
-            where: { userId: user.id },
-        });
+    async messages(@Parent() user: User, @Context() context: GraphQLContext) {
+        return context.loaders.messagesByUserLoader.load(user.id);
     }
 }
