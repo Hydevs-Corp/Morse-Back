@@ -34,22 +34,39 @@ export class ConversationsResolver {
         return this.conversationsService.conversation({ id });
     }
 
+    // return conversations where all participants match the provided IDs, no more, no less
     @Query(() => [Conversation])
     async conversationsByParticipant(
         @Args({ name: 'participantIds', type: () => [Int] })
         participantIds: number[]
     ) {
-        const conversations = await this.conversationsService.conversations({
-            where: {
-                participants: {
-                    every: {
-                        id: { in: participantIds },
-                    },
-                },
+        if (!participantIds || participantIds.length === 0) {
+            return [];
+        }
+
+        const uniqueParticipantIds = [...new Set(participantIds)];
+
+        // Find conversations that have exactly these participants
+        const conversations = await this.prisma.conversation.findMany({
+            include: {
+                participants: true,
             },
         });
-        return conversations.filter(conv => {
-            return true;
+
+        // Filter conversations to match exactly the provided participant IDs
+        return conversations.filter(conversation => {
+            const conversationParticipantIds = conversation.participants
+                .map(p => p.id)
+                .sort();
+            const sortedProvidedIds = uniqueParticipantIds.sort();
+
+            return (
+                conversationParticipantIds.length ===
+                    sortedProvidedIds.length &&
+                conversationParticipantIds.every(
+                    (id, index) => id === sortedProvidedIds[index]
+                )
+            );
         });
     }
 
