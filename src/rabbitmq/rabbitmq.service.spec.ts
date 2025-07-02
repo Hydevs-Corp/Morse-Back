@@ -194,7 +194,6 @@ describe('RabbitmqService', () => {
         it('should handle null/undefined message gracefully', async () => {
             mockClientProxy.emit.mockReturnValue(of({}));
 
-            // The service doesn't validate input, so it will pass null to RabbitMQ
             await service.sendMessage(null as any);
 
             expect(mockClientProxy.emit).toHaveBeenCalledWith(

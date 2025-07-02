@@ -24,32 +24,26 @@ describe('Messages E2E', () => {
 
         await app.init();
 
-        // Setup test data
         await setupTestData();
     });
 
     afterAll(async () => {
         try {
-            // Cleanup test data
             await cleanupTestData();
         } catch (error) {
             console.error('Error during cleanup:', error);
         } finally {
-            // Ensure connections are properly closed
             await prisma.$disconnect();
 
-            // Close the app and wait for it to fully shut down
             if (app) {
                 await app.close();
             }
 
-            // Give some time for any remaining connections to close
             await new Promise(resolve => setTimeout(resolve, 100));
         }
     });
 
     async function setupTestData() {
-        // Create test user
         testUser = await prisma.user.create({
             data: {
                 email: 'test@example.com',
@@ -58,7 +52,6 @@ describe('Messages E2E', () => {
             },
         });
 
-        // Create test conversation - the user needs to exist first
         testConversation = await prisma.conversation.create({
             data: {
                 participants: {
@@ -67,18 +60,15 @@ describe('Messages E2E', () => {
             },
         });
 
-        // Generate real JWT token
         const { access_token } = await authService.login(testUser);
         authToken = `Bearer ${access_token}`;
     }
 
     async function cleanupTestData() {
-        // Delete in the correct order to avoid foreign key constraints
         await prisma.message.deleteMany({
             where: { userId: testUser.id },
         });
 
-        // Remove participants from conversations before deleting
         if (testConversation?.id) {
             await prisma.conversation.update({
                 where: { id: testConversation.id },
@@ -156,7 +146,7 @@ describe('Messages E2E', () => {
                 `;
 
                 const variables = {
-                    conversationId: 99999, // Non-existent conversation
+                    conversationId: 99999,
                     content: 'This should fail',
                 };
 
@@ -186,7 +176,7 @@ describe('Messages E2E', () => {
 
                 const response = await request(app.getHttpServer())
                     .post('/graphql')
-                    // No authorization header
+
                     .send({
                         query: mutation,
                         variables,
@@ -204,7 +194,6 @@ describe('Messages E2E', () => {
             let testMessage: any;
 
             beforeAll(async () => {
-                // Create a test message
                 testMessage = await prisma.message.create({
                     data: {
                         content: 'Test message for query',
@@ -341,7 +330,6 @@ describe('Messages E2E', () => {
                 expect(response.status).toBe(200);
                 expect(response.body.data.deleteMessage).toBe(true);
 
-                // Verify message was deleted
                 const deletedMessage = await prisma.message.findUnique({
                     where: { id: testMessage.id },
                 });
@@ -378,13 +366,11 @@ describe('Messages E2E', () => {
             const responses = await Promise.all(promises);
             const endTime = Date.now();
 
-            // All requests should succeed
             responses.forEach(response => {
                 expect(response.status).toBe(200);
                 expect(response.body.data.sendMessage).toBeDefined();
             });
 
-            // Performance check (should complete within 5 seconds)
             const duration = endTime - startTime;
             expect(duration).toBeLessThan(5000);
 
@@ -422,7 +408,6 @@ describe('Messages E2E', () => {
             expect(response.status).toBe(200);
             expect(response.body.data.sendMessage).toBeDefined();
 
-            // Response should be under 1 second
             expect(responseTime).toBeLessThan(1000);
 
             console.log(`sendMessage response time: ${responseTime}ms`);

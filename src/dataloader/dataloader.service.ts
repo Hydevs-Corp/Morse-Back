@@ -9,7 +9,6 @@ import { Message } from '../messages/message.model';
 export class DataLoaderService {
     constructor(private readonly prisma: PrismaService) {}
 
-    // DataLoader for users by ID
     createUserLoader(): DataLoader<number, User | null> {
         return new DataLoader<number, User | null>(
             async (userIds: readonly number[]) => {
@@ -30,7 +29,6 @@ export class DataLoaderService {
         );
     }
 
-    // DataLoader for conversations by ID
     createConversationLoader(): DataLoader<number, Conversation | null> {
         return new DataLoader<number, Conversation | null>(
             async (conversationIds: readonly number[]) => {
@@ -89,7 +87,7 @@ export class DataLoaderService {
                                             name: participant.name ?? undefined,
                                         })
                                     ),
-                                    messages: [], // Avoid circular reference
+                                    messages: [],
                                 },
                             })),
                         },
@@ -102,7 +100,6 @@ export class DataLoaderService {
         );
     }
 
-    // DataLoader for conversations by user ID
     createConversationsByUserLoader(): DataLoader<number, Conversation[]> {
         return new DataLoader<number, Conversation[]>(
             async (userIds: readonly number[]) => {
@@ -130,7 +127,6 @@ export class DataLoaderService {
                 });
 
                 conversations.forEach(conversation => {
-                    // Map participants' name: null -> undefined for type compatibility
                     const fixedParticipants = conversation.participants.map(
                         participant => ({
                             ...participant,
@@ -149,14 +145,14 @@ export class DataLoaderService {
                                 createdAt: conversation.createdAt,
                                 updatedAt: conversation.updatedAt,
                                 participants: fixedParticipants,
-                                messages: [], // Avoid circular reference
+                                messages: [],
                             },
                         })
                     );
                     const fixedConversation: Conversation = {
                         ...conversation,
                         participants: fixedParticipants,
-                        messages: fixedMessages as any, // Type assertion to satisfy Message[]
+                        messages: fixedMessages as any,
                     };
                     conversation.participants.forEach(participant => {
                         if (userIds.includes(participant.id)) {
@@ -178,7 +174,6 @@ export class DataLoaderService {
         );
     }
 
-    // DataLoader for messages by user ID
     createMessagesByUserLoader(): DataLoader<number, Message[]> {
         return new DataLoader<number, Message[]>(
             async (userIds: readonly number[]) => {
@@ -218,7 +213,7 @@ export class DataLoaderService {
                 messages.forEach(message => {
                     const userMessages =
                         messagesByUser.get(message.userId) || [];
-                    // Fix: Ensure conversation has a messages field to satisfy Conversation type
+
                     const fixedMessage = {
                         ...message,
                         user: {
@@ -233,7 +228,7 @@ export class DataLoaderService {
                                     name: participant.name ?? undefined,
                                 })
                             ),
-                            messages: [], // Avoid circular reference, but required by Conversation type
+                            messages: [],
                         },
                     };
                     userMessages.push(fixedMessage as Message);
@@ -245,7 +240,6 @@ export class DataLoaderService {
         );
     }
 
-    // DataLoader for messages by conversation ID
     createMessagesByConversationLoader(): DataLoader<number, Message[]> {
         return new DataLoader<number, Message[]>(
             async (conversationIds: readonly number[]) => {
@@ -286,7 +280,7 @@ export class DataLoaderService {
                     const conversationMessages =
                         messagesByConversation.get(message.conversationId) ||
                         [];
-                    // Ensure conversation property has messages field to satisfy Conversation type
+
                     const fixedMessage = {
                         ...message,
                         user: {
@@ -301,7 +295,7 @@ export class DataLoaderService {
                                     name: participant.name ?? undefined,
                                 })
                             ),
-                            messages: [], // Avoid circular reference, but required by Conversation type
+                            messages: [],
                         },
                     };
                     conversationMessages.push(fixedMessage as Message);
@@ -319,7 +313,6 @@ export class DataLoaderService {
         );
     }
 
-    // DataLoader for participants by conversation ID
     createParticipantsByConversationLoader(): DataLoader<number, User[]> {
         return new DataLoader<number, User[]>(
             async (conversationIds: readonly number[]) => {

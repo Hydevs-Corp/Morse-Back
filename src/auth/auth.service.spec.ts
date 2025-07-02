@@ -6,7 +6,6 @@ import { ConfigService } from '@nestjs/config';
 import { User } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 
-// Mock bcrypt
 jest.mock('bcrypt');
 const mockedBcrypt = bcrypt as jest.Mocked<typeof bcrypt>;
 

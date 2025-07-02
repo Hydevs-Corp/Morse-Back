@@ -34,7 +34,6 @@ export class MessagesService {
     }
 
     async createMessage(data: Prisma.MessageCreateInput): Promise<Message> {
-        // Validate that the conversation exists before creating the message
         if (data.conversation?.connect?.id) {
             const conversationExists =
                 await this.prisma.conversation.findUnique({

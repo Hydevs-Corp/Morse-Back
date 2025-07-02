@@ -25,6 +25,8 @@ model Conversation {
 
   participants User[] @relation("ConversationParticipants")
   messages Message[]
+
+  @@index([createdAt])
 }
 
 model Message {
@@ -37,4 +39,8 @@ model Message {
 
   conversation Conversation @relation(fields: [conversationId], references: [id])
   user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId])
+  @@index([userId])
+  @@index([createdAt])
 }

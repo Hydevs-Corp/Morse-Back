@@ -17,7 +17,6 @@ export class RabbitmqConsumer {
         console.log('Processing message from RabbitMQ:', message.id);
 
         try {
-            // Publish the message to all participants via GraphQL subscriptions
             const participants = message.conversation.participants;
             participants.forEach(participant => {
                 this.pubSubService.publish(`messageAdded_${participant.id}`, {
@@ -42,9 +41,6 @@ export class RabbitmqConsumer {
         );
 
         try {
-            // For message updates, we need to know which users to notify
-            // Since we don't have participants in the update event, we'll need to modify
-            // the service to include them or use a global approach for now
             this.pubSubService.publish('messageUpdated_global', {
                 messageUpdated: messageUpdate,
             });
@@ -69,8 +65,6 @@ export class RabbitmqConsumer {
         );
 
         try {
-            // For message deletions, we need to know which users to notify
-            // Since we don't have participants in the delete event, we'll use a global approach
             this.pubSubService.publish('messageDeleted_global', {
                 messageDeleted: messageDelete,
             });

@@ -1,7 +1,6 @@
-// Setup file for Puppeteer tests
 module.exports = {
     launch: {
-        headless: true, // Always headless for automated testing
+        headless: true,
         slowMo: process.env.CI ? 0 : 50,
         devtools: false,
         defaultViewport: {

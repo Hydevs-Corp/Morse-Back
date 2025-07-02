@@ -89,13 +89,10 @@ describe('RabbitMQ Service Integration', () => {
 
     describe('sendMessage', () => {
         it('should emit message with correct pattern and payload', async () => {
-            // Arrange
             mockClientProxy.emit.mockReturnValue(of({}));
 
-            // Act
             await rabbitmqService.sendMessage(mockMessageEvent);
 
-            // Assert
             expect(mockClientProxy.emit).toHaveBeenCalledWith(
                 'message_created',
                 mockMessageEvent
@@ -103,12 +100,10 @@ describe('RabbitMQ Service Integration', () => {
         });
 
         it('should handle timeout errors gracefully', async () => {
-            // Arrange
             mockClientProxy.emit.mockReturnValue(
                 throwError(() => new Error('Network timeout'))
             );
 
-            // Act & Assert
             await expect(
                 rabbitmqService.sendMessage(mockMessageEvent)
             ).rejects.toThrow('Network timeout');
@@ -117,13 +112,10 @@ describe('RabbitMQ Service Integration', () => {
 
     describe('sendMessageUpdate', () => {
         it('should emit update with correct pattern and payload', async () => {
-            // Arrange
             mockClientProxy.emit.mockReturnValue(of({}));
 
-            // Act
             await rabbitmqService.sendMessageUpdate(mockMessageUpdateEvent);
 
-            // Assert
             expect(mockClientProxy.emit).toHaveBeenCalledWith(
                 'message_updated',
                 mockMessageUpdateEvent
@@ -133,13 +125,10 @@ describe('RabbitMQ Service Integration', () => {
 
     describe('sendMessageDelete', () => {
         it('should emit delete with correct pattern and payload', async () => {
-            // Arrange
             mockClientProxy.emit.mockReturnValue(of({}));
 
-            // Act
             await rabbitmqService.sendMessageDelete(mockMessageDeleteEvent);
 
-            // Assert
             expect(mockClientProxy.emit).toHaveBeenCalledWith(
                 'message_deleted',
                 mockMessageDeleteEvent
@@ -149,15 +138,12 @@ describe('RabbitMQ Service Integration', () => {
 
     describe('multiple operations', () => {
         it('should emit correct patterns for different operations', async () => {
-            // Arrange
             mockClientProxy.emit.mockReturnValue(of({}));
 
-            // Act
             await rabbitmqService.sendMessage(mockMessageEvent);
             await rabbitmqService.sendMessageUpdate(mockMessageUpdateEvent);
             await rabbitmqService.sendMessageDelete(mockMessageDeleteEvent);
 
-            // Assert
             expect(mockClientProxy.emit).toHaveBeenCalledWith(
                 'message_created',
                 mockMessageEvent
@@ -174,15 +160,13 @@ describe('RabbitMQ Service Integration', () => {
         });
 
         it('should handle partial failures in multiple operations', async () => {
-            // Arrange
             mockClientProxy.emit
-                .mockReturnValueOnce(of({})) // First call succeeds
+                .mockReturnValueOnce(of({}))
                 .mockReturnValueOnce(
                     throwError(() => new Error('RabbitMQ timeout'))
-                ) // Second call fails
-                .mockReturnValueOnce(of({})); // Third call succeeds
+                )
+                .mockReturnValueOnce(of({}));
 
-            // Act & Assert
             await expect(
                 rabbitmqService.sendMessage(mockMessageEvent)
             ).resolves.toBeUndefined();
@@ -199,24 +183,18 @@ describe('RabbitMQ Service Integration', () => {
 
     describe('connection management', () => {
         it('should handle connection initialization', async () => {
-            // Arrange
             mockClientProxy.connect.mockResolvedValue(undefined);
 
-            // Act
             await rabbitmqService.onModuleInit();
 
-            // Assert
             expect(mockClientProxy.connect).toHaveBeenCalled();
         });
 
         it('should handle connection cleanup', async () => {
-            // Arrange
             mockClientProxy.close.mockResolvedValue(undefined);
 
-            // Act
             await rabbitmqService.onModuleDestroy();
 
-            // Assert
             expect(mockClientProxy.close).toHaveBeenCalled();
         });
     });

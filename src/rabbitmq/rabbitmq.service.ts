@@ -105,7 +105,6 @@ export class RabbitmqService implements OnModuleDestroy {
         try {
             await this.client.close();
         } catch (error) {
-            // Ignore errors during cleanup as connections might already be closed
             if (process.env.NODE_ENV !== 'test') {
                 console.warn('Error closing RabbitMQ connection:', error);
             }

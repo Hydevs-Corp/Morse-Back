@@ -1,5 +1,4 @@
 module.exports = {
-    // Generate random email for each virtual user
     generateRandomEmail: function (context, events, done) {
         const timestamp = Date.now();
         const random = Math.floor(Math.random() * 10000);
@@ -9,7 +8,6 @@ module.exports = {
         return done();
     },
 
-    // Log response times for monitoring
     logResponseTime: function (requestParams, response, context, ee, next) {
         if (response.body && response.body.data) {
             console.log(
@@ -19,17 +17,12 @@ module.exports = {
         return next();
     },
 
-    // Track RabbitMQ metrics (if accessible)
     trackRabbitMQMetrics: function (context, events, done) {
-        // This would connect to RabbitMQ management API to get metrics
-        // For now, we'll just log the attempt
         console.log('Tracking RabbitMQ metrics...');
         return done();
     },
 
-    // Custom assertions
     assertResponseTime: function (requestParams, response, context, ee, next) {
-        // Assert that sendMessage responses are under 500ms
         if (requestParams.name === 'sendMessage') {
             if (response.timings.response > 500) {
                 console.warn(
@@ -40,7 +33,6 @@ module.exports = {
         return next();
     },
 
-    // Generate test data
     generateTestMessage: function (context, events, done) {
         const messages = [
             'Hello from performance test!',
@@ -55,7 +47,6 @@ module.exports = {
         return done();
     },
 
-    // Monitor memory usage (simplified)
     monitorMemory: function (context, events, done) {
         const used = process.memoryUsage();
         console.log(
@@ -64,11 +55,9 @@ module.exports = {
         return done();
     },
 
-    // Setup phase - prepare test data
     setupPhase: function (context, events, done) {
         console.log('Setting up performance test...');
 
-        // Initialize metrics tracking
         if (!global.performanceMetrics) {
             global.performanceMetrics = {
                 sendMessageTimes: [],
@@ -81,7 +70,6 @@ module.exports = {
         return done();
     },
 
-    // Record metrics for analysis
     recordMetrics: function (requestParams, response, context, ee, next) {
         if (!global.performanceMetrics) {
             global.performanceMetrics = {
@@ -110,7 +98,6 @@ module.exports = {
         return next();
     },
 
-    // Print summary at the end
     printSummary: function (context, events, done) {
         if (
             global.performanceMetrics &&

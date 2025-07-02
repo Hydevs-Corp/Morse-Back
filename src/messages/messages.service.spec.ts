@@ -60,7 +60,6 @@ describe('MessagesService', () => {
         service = module.get<MessagesService>(MessagesService);
         prismaService = module.get<PrismaService>(PrismaService);
 
-        // Reset mocks
         jest.clearAllMocks();
     });
 
@@ -138,7 +137,6 @@ describe('MessagesService', () => {
                 conversation: { connect: { id: 1 } },
             };
 
-            // Mock the conversation exists check
             mockPrismaService.conversation.findUnique.mockResolvedValue(
                 mockConversation
             );
@@ -168,7 +166,6 @@ describe('MessagesService', () => {
                 conversation: { connect: { id: 999 } },
             };
 
-            // Mock the conversation does not exist
             mockPrismaService.conversation.findUnique.mockResolvedValue(null);
 
             await expect(service.createMessage(createData)).rejects.toThrow(

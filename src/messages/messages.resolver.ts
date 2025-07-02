@@ -78,7 +78,6 @@ export class MessagesResolver {
                 content,
             });
 
-            // Send message to RabbitMQ
             await this.rabbitmqService.sendMessage({
                 id: message.id,
                 content: message.content,
@@ -93,7 +92,7 @@ export class MessagesResolver {
                 },
                 conversation: {
                     id: conversationId,
-                    participants: [], // Will be populated below
+                    participants: [],
                 },
             });
 
@@ -107,7 +106,7 @@ export class MessagesResolver {
                     messageAdded: {
                         ...message,
                         user: currentUser,
-                        conversationId: conversationId, // Keep as number to avoid type confusion
+                        conversationId: conversationId,
                     },
                 });
             });
@@ -226,7 +225,6 @@ export class MessagesResolver {
         const conversationId =
             (message as any).conversationId ?? message.conversation?.id;
 
-        // Ensure conversationId is a number for Prisma
         const id =
             typeof conversationId === 'string'
                 ? parseInt(conversationId, 10)
@@ -239,7 +237,6 @@ export class MessagesResolver {
     async user(@Parent() message: Message, @Context() context: GraphQLContext) {
         const userId = (message as any).userId ?? message.user?.id;
 
-        // Ensure userId is a number for Prisma
         const id = typeof userId === 'string' ? parseInt(userId, 10) : userId;
 
         return context.loaders.userLoader.load(id);

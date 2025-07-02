@@ -34,7 +34,6 @@ export class ConversationsResolver {
         return this.conversationsService.conversation({ id });
     }
 
-    // return conversations where all participants match the provided IDs, no more, no less
     @Query(() => [Conversation])
     async conversationsByParticipant(
         @Args({ name: 'participantIds', type: () => [Int] })
@@ -46,14 +45,12 @@ export class ConversationsResolver {
 
         const uniqueParticipantIds = [...new Set(participantIds)];
 
-        // Find conversations that have exactly these participants
         const conversations = await this.prisma.conversation.findMany({
             include: {
                 participants: true,
             },
         });
 
-        // Filter conversations to match exactly the provided participant IDs
         return conversations.filter(conversation => {
             const conversationParticipantIds = conversation.participants
                 .map(p => p.id)
@@ -92,7 +89,6 @@ export class ConversationsResolver {
         participantIds: number[],
         @CurrentUser() user: any
     ) {
-        // Ensure the current user is included in the conversation
         const allParticipantIds = [...new Set([...participantIds, user.id])];
         return this.conversationsService.createConversation({
             participants: { connect: allParticipantIds.map(id => ({ id })) },
@@ -105,8 +101,6 @@ export class ConversationsResolver {
         @Args('id', { type: () => Int }) id: number,
         @CurrentUser() user: any
     ) {
-        // You might want to add additional authorization logic here
-        // to ensure the user can only delete conversations they're part of
         return this.conversationsService.deleteConversation({ id });
     }
 

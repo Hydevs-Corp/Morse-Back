@@ -1,4 +1,3 @@
-// Test script to verify console suppression works
 process.env.NODE_ENV = 'test';
 
 const { execSync } = require('child_process');

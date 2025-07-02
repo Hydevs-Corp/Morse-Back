@@ -65,7 +65,7 @@ export class UsersResolver {
     async signup(
         @Args('email') email: string,
         @Args('password') password: string,
-        @Args('name', { nullable: true }) name?: string
+        @Args('name') name: string
     ) {
         const hash = await bcrypt.hash(password, 10);
         const user = await this.usersService.createUser({
@@ -113,7 +113,6 @@ export class UsersResolver {
             lastConnection: new Date(),
         }));
 
-        // Publish to all users
         this.pubSubService.publish('onlineUsersUpdated', {
             onlineUsersUpdated: { online: onlineList },
         });
@@ -131,7 +130,6 @@ export class UsersResolver {
             lastConnection: new Date(),
         }));
 
-        // Publish to all users
         this.pubSubService.publish('onlineUsersUpdated', {
             onlineUsersUpdated: { online: onlineList },
         });
