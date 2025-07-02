@@ -2,31 +2,27 @@ name: Build and Push Docker Image
 
 on:
     push:
-        branches: [main]
+        branches: [staging]
     pull_request:
-        branches: [main]
+        branches: [staging]
 
 jobs:
     build-and-push:
         runs-on: self-hosted
 
         steps:
-            # Étape 1: Récupérer le code source
             - name: Checkout code
               uses: actions/checkout@v4
 
-            # Étape 2: Configurer Docker Buildx (pour les builds multi-plateformes)
             - name: Set up Docker Buildx
               uses: docker/setup-buildx-action@v3
 
-            # Étape 3: Se connecter à Docker Hub
             - name: Login to Docker Hub
               uses: docker/login-action@v3
               with:
                   username: ${{ secrets.DOCKER_USERNAME }}
                   password: ${{ secrets.DOCKER_PASSWORD }}
 
-            # Étape 4: Extraire les métadonnées (tags, labels)
             - name: Extract metadata
               id: meta
               uses: docker/metadata-action@v5
@@ -37,7 +33,6 @@ jobs:
                       type=ref,event=pr
                       type=raw,value=latest,enable={{is_default_branch}}
 
-            # Étape 5: Construire et publier l'image Docker
             - name: Build and push Docker image
               uses: docker/build-push-action@v5
               with:
@@ -51,3 +46,37 @@ jobs:
                   build-args: |
                       BUILDKIT_INLINE_CACHE=1
                   platforms: linux/amd64
+
+    pull-image-and-deploy:
+        runs-on: self-hosted
+
+        needs: build-and-push
+
+        steps:
+            - name: Deploy to remote server
+              uses: appleboy/ssh-action@v1.0.3
+              with:
+                  host: ${{ secrets.VPS_HOST }}
+                  username: ${{ secrets.VPS_USERNAME }}
+                  key: ${{ secrets.VPS_PRIVATE_KEY }}
+                  script: |
+                      # Tirer l'image Docker
+                      docker pull angysquirrel/morse-back:latest
+
+                      # Arrêter et supprimer le conteneur existant
+                      docker stop morse-back || true
+                      docker rm morse-back || true
+
+                      # Déployer la nouvelle image
+                      docker run -d --name morse-back -p 3000:3000 angysquirrel/morse-back:latest
+
+                      # Afficher les logs du conteneur
+                      docker logs morse-back
+
+                      # Vérifier l'état du conteneur
+                      if [ "$(docker ps -q -f name=morse-back)" ]; then
+                          echo "Container is running successfully."
+                      else
+                          echo "Container failed to start."
+                          exit 1
+                      fi

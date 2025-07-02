@@ -7,6 +7,9 @@ export class Conversation {
     @Field(() => ID)
     id: number;
 
+    @Field(() => String)
+    name: string;
+
     @Field(() => [User])
     participants: User[];
 

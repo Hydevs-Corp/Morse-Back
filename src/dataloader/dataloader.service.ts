@@ -79,6 +79,7 @@ export class DataLoaderService {
                                 },
                                 conversation: {
                                     id: conv.id,
+                                    name: conv.name ?? '',
                                     createdAt: conv.createdAt,
                                     updatedAt: conv.updatedAt,
                                     participants: conv.participants.map(
