@@ -24,6 +24,7 @@ describe('RabbitMQ Service Integration', () => {
         id: 1,
         createdAt: new Date(),
         updatedAt: new Date(),
+        name: 'Test Conversation',
     };
 
     const mockMessage: Message = {

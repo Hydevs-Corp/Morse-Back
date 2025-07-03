@@ -87,11 +87,15 @@ export class ConversationsResolver {
     async createConversation(
         @Args({ name: 'participantIds', type: () => [Int] })
         participantIds: number[],
+        @Args('name', { type: () => String, nullable: true })
+        name: string,
         @CurrentUser() user: any
     ) {
+        console.log('Creating conversation with participants:', participantIds);
         const allParticipantIds = [...new Set([...participantIds, user.id])];
         return this.conversationsService.createConversation({
             participants: { connect: allParticipantIds.map(id => ({ id })) },
+            name: name,
         });
     }
 
@@ -102,6 +106,16 @@ export class ConversationsResolver {
         @CurrentUser() user: any
     ) {
         return this.conversationsService.deleteConversation({ id });
+    }
+
+    @Mutation(() => Conversation)
+    @UseGuards(GqlAuthGuard)
+    async updateConversationName(
+        @Args('id', { type: () => Int }) id: number,
+        @Args('name', { type: () => String }) name: string,
+        @CurrentUser() user: any
+    ) {
+        return this.conversationsService.updateConversationName(id, name);
     }
 
     @ResolveField(() => [User])

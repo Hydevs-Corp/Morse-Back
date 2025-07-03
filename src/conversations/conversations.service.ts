@@ -50,6 +50,16 @@ export class ConversationsService {
         });
     }
 
+    async updateConversationName(
+        conversationId: number,
+        name: string
+    ): Promise<Conversation> {
+        return this.prisma.conversation.update({
+            where: { id: conversationId },
+            data: { name },
+        });
+    }
+
     async deleteConversation(
         where: Prisma.ConversationWhereUniqueInput
     ): Promise<Conversation> {

@@ -22,6 +22,7 @@ import { PrismaService } from '../prisma.service';
 import { Conversation } from '../conversations/conversation.model';
 import { Message } from '../messages/message.model';
 import { PubSubService } from '../pubsub/pubsub.service';
+import { OnlineUsersService } from './online-users.service';
 import { ObjectType, Field } from '@nestjs/graphql';
 import { GraphQLContext } from '../context/context.service';
 
@@ -42,13 +43,12 @@ class OnlineUsersPayload {
 
 @Resolver(() => User)
 export class UsersResolver {
-    private onlineUsers: Set<string> = new Set();
-
     constructor(
         private readonly usersService: UsersService,
         private readonly authService: AuthService,
         private readonly prisma: PrismaService,
-        private readonly pubSubService: PubSubService
+        private readonly pubSubService: PubSubService,
+        private readonly onlineUsersService: OnlineUsersService
     ) {}
 
     @Query(() => [User])
@@ -103,37 +103,24 @@ export class UsersResolver {
         return this.usersService.user({ id: user.id });
     }
 
+    @Query(() => OnlineUsersPayload)
+    @UseGuards(GqlAuthGuard)
+    async getOnlineUsers(): Promise<OnlineUsersPayload> {
+        const onlineList = this.onlineUsersService.getOnlineUsers();
+        return { online: onlineList };
+    }
+
     @Mutation(() => Boolean)
     @UseGuards(GqlAuthGuard)
     async setUserOnline(@CurrentUser() user: any): Promise<boolean> {
-        this.onlineUsers.add(user.id.toString());
-
-        const onlineList = Array.from(this.onlineUsers).map(userId => ({
-            userId,
-            lastConnection: new Date(),
-        }));
-
-        this.pubSubService.publish('onlineUsersUpdated', {
-            onlineUsersUpdated: { online: onlineList },
-        });
-
+        this.onlineUsersService.setUserOnline(user.id.toString());
         return true;
     }
 
     @Mutation(() => Boolean)
     @UseGuards(GqlAuthGuard)
     async setUserOffline(@CurrentUser() user: any): Promise<boolean> {
-        this.onlineUsers.delete(user.id.toString());
-
-        const onlineList = Array.from(this.onlineUsers).map(userId => ({
-            userId,
-            lastConnection: new Date(),
-        }));
-
-        this.pubSubService.publish('onlineUsersUpdated', {
-            onlineUsersUpdated: { online: onlineList },
-        });
-
+        this.onlineUsersService.setUserOffline(user.id.toString());
         return true;
     }
 
