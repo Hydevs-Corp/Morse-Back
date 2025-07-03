@@ -60,20 +60,21 @@ jobs:
                   username: ${{ secrets.VPS_USERNAME }}
                   key: ${{ secrets.VPS_PRIVATE_KEY }}
                   script: |
-                      # Tirer l'image Docker
                       docker pull angysquirrel/morse-back:latest
 
-                      # Arrêter et supprimer le conteneur existant
                       docker stop morse-back || true
                       docker rm morse-back || true
 
-                      # Déployer la nouvelle image
-                      docker run -d --name morse-back -p 3000:3000 angysquirrel/morse-back:latest
+                      echo "${{ secrets.DOTENV_CONTENT }}" > /home/ubuntu/back/morse/.env
 
-                      # Afficher les logs du conteneur
+                      docker run -d \
+                        --name morse-back \
+                        -p 3000:3000 \
+                        --env-file /home/ubuntu/back/morse/.env \
+                        angysquirrel/morse-back:latest
+
                       docker logs morse-back
 
-                      # Vérifier l'état du conteneur
                       if [ "$(docker ps -q -f name=morse-back)" ]; then
                           echo "Container is running successfully."
                       else
