@@ -32,6 +32,7 @@ jobs:
                       type=ref,event=branch
                       type=ref,event=pr
                       type=raw,value=latest,enable={{is_default_branch}}
+                      type=sha,format=long
 
             - name: Build and push Docker image
               uses: docker/build-push-action@v5
@@ -46,10 +47,15 @@ jobs:
                   build-args: |
                       BUILDKIT_INLINE_CACHE=1
                   platforms: linux/amd64
+            - name: Clean up Docker images
+              if: always()
+              run: |
+                  echo "Cleaning up Docker images..."
+                  docker system prune -af || true
+                  docker volume prune -f || true
 
     pull-image-and-deploy:
         runs-on: self-hosted
-
         needs: build-and-push
 
         steps:
@@ -60,24 +66,56 @@ jobs:
                   username: ${{ secrets.VPS_USERNAME }}
                   key: ${{ secrets.VPS_PRIVATE_KEY }}
                   script: |
-                      docker pull angysquirrel/morse-back:latest
+                      IMAGE_TAG="angysquirrel/morse-back:${{ github.sha }}" # Ou 'latest' si vous préférez
 
+                      echo "Pulling Docker image: $IMAGE_TAG"
+                      docker pull $IMAGE_TAG
+
+                      echo "Stopping and removing existing container (if any)"
                       docker stop morse-back || true
                       docker rm morse-back || true
 
+                      echo "Creating .env file on remote server"
+                      mkdir -p /home/ubuntu/back/morse # S'assure que le répertoire existe
                       echo "${{ secrets.DOTENV_CONTENT }}" > /home/ubuntu/back/morse/.env
-
-                      docker run -d \
-                        --name morse-back \
-                        -p 3000:3000 \
-                        --env-file /home/ubuntu/back/morse/.env \
-                        angysquirrel/morse-back:latest
-
-                      docker logs morse-back
-
-                      if [ "$(docker ps -q -f name=morse-back)" ]; then
-                          echo "Container is running successfully."
-                      else
-                          echo "Container failed to start."
+                      if [ ! -f /home/ubuntu/back/morse/.env ]; then
+                          echo "Error: .env file was not created properly."
                           exit 1
                       fi
+
+                      echo "Running new Docker container"
+                      docker run -d \
+                          --name morse-back \
+                          -p 3000:3000 \
+                          --env-file /home/ubuntu/back/morse/.env \
+                          $IMAGE_TAG
+
+                      echo "Waiting for container to stabilize..."
+                      sleep 10 # Donne un peu de temps au conteneur pour démarrer
+
+                      echo "Checking container logs for initial startup"
+                      docker logs morse-back | tail -n 20 # Affiche les 20 dernières lignes des logs
+
+                      echo "Verifying container status"
+                      if docker ps -q -f name=morse-back; then
+                          echo "Container 'morse-back' is running successfully."
+                          # Vous pouvez ajouter ici des checks de santé plus avancés, par exemple,
+                          # en essayant de joindre une URL de l'application.
+                          # curl -f http://localhost:3000/health || { echo "Health check failed!"; exit 1; }
+                      else
+                          echo "Container 'morse-back' failed to start."
+                          docker logs morse-back # Affiche les logs complets en cas d'échec
+                          exit 1
+                      fi
+
+            - name: Clean up Docker artifacts on remote server (Optional)
+              if: always()
+              uses: appleboy/ssh-action@v1.0.3
+              with:
+                  host: ${{ secrets.VPS_HOST }}
+                  username: ${{ secrets.VPS_USERNAME }}
+                  key: ${{ secrets.VPS_PRIVATE_KEY }}
+                  script: |
+                      echo "Cleaning up old Docker images on remote server..."
+                      docker image prune -af --filter "until=24h" || true # Supprime les images non utilisées de plus de 24h
+                      docker system prune -f || true # Nettoie aussi les réseaux et volumes non utilisés

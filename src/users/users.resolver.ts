@@ -97,6 +97,26 @@ export class UsersResolver {
         return access_token;
     }
 
+    @Mutation(() => User)
+    @UseGuards(GqlLocalAuthGuard)
+    async updateUser(
+        @Args('name') name: string,
+        @CurrentUser() user: any
+    ): Promise<User> {
+        const updatedUser = await this.usersService.updateUser({
+            where: { id: user.id },
+            data: { name },
+        });
+        // this.pubSubService.publish('userUpdated', {
+        //     userUpdated: updatedUser,
+        // });
+        return {
+            name: updatedUser.name,
+            id: updatedUser.id,
+            email: updatedUser.email,
+        };
+    }
+
     @Query(() => User)
     @UseGuards(GqlAuthGuard)
     async me(@CurrentUser() user: any) {
