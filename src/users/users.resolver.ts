@@ -101,11 +101,13 @@ export class UsersResolver {
     @UseGuards(GqlAuthGuard)
     async updateUser(
         @Args('name') name: string,
+        @Args('avatar', { type: () => String, nullable: true })
+        avatar: string | undefined,
         @CurrentUser() user: any
     ): Promise<User> {
         const updatedUser = await this.usersService.updateUser({
             where: { id: user.id },
-            data: { name },
+            data: { name, avatar },
         });
         // this.pubSubService.publish('userUpdated', {
         //     userUpdated: updatedUser,
@@ -114,6 +116,7 @@ export class UsersResolver {
             name: updatedUser.name,
             id: updatedUser.id,
             email: updatedUser.email,
+            avatar: updatedUser.avatar ?? undefined,
         };
     }
 

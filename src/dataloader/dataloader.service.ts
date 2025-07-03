@@ -21,7 +21,12 @@ export class DataLoaderService {
                 const userMap = new Map(
                     users.map(user => [
                         user.id,
-                        { ...user, name: user.name || undefined },
+                        {
+                            id: user.id,
+                            email: user.email,
+                            name: user.name || '',
+                            avatar: user.avatar || undefined,
+                        },
                     ])
                 );
                 return userIds.map(id => userMap.get(id) || null);
@@ -42,7 +47,7 @@ export class DataLoaderService {
                                 id: true,
                                 email: true,
                                 name: true,
-                                password: true,
+                                avatar: true,
                             },
                         },
                         messages: {
@@ -52,7 +57,7 @@ export class DataLoaderService {
                                         id: true,
                                         email: true,
                                         name: true,
-                                        password: true,
+                                        avatar: true,
                                     },
                                 },
                             },
@@ -67,15 +72,19 @@ export class DataLoaderService {
                             ...conv,
                             participants: conv.participants.map(
                                 participant => ({
-                                    ...participant,
-                                    name: participant.name ?? undefined,
+                                    id: participant.id,
+                                    email: participant.email,
+                                    name: participant.name || '',
+                                    avatar: participant.avatar || undefined,
                                 })
                             ),
                             messages: conv.messages.map(message => ({
                                 ...message,
                                 user: {
-                                    ...message.user,
-                                    name: message.user.name ?? undefined,
+                                    id: message.user.id,
+                                    email: message.user.email,
+                                    name: message.user.name || '',
+                                    avatar: message.user.avatar || undefined,
                                 },
                                 conversation: {
                                     id: conv.id,
@@ -84,8 +93,11 @@ export class DataLoaderService {
                                     updatedAt: conv.updatedAt,
                                     participants: conv.participants.map(
                                         participant => ({
-                                            ...participant,
-                                            name: participant.name ?? undefined,
+                                            id: participant.id,
+                                            email: participant.email,
+                                            name: participant.name || '',
+                                            avatar:
+                                                participant.avatar || undefined,
                                         })
                                     ),
                                     messages: [],
@@ -113,10 +125,24 @@ export class DataLoaderService {
                         },
                     },
                     include: {
-                        participants: true,
+                        participants: {
+                            select: {
+                                id: true,
+                                email: true,
+                                name: true,
+                                avatar: true,
+                            },
+                        },
                         messages: {
                             include: {
-                                user: true,
+                                user: {
+                                    select: {
+                                        id: true,
+                                        email: true,
+                                        name: true,
+                                        avatar: true,
+                                    },
+                                },
                             },
                         },
                     },
@@ -130,16 +156,20 @@ export class DataLoaderService {
                 conversations.forEach(conversation => {
                     const fixedParticipants = conversation.participants.map(
                         participant => ({
-                            ...participant,
-                            name: participant.name ?? undefined,
+                            id: participant.id,
+                            email: participant.email,
+                            name: participant.name || '',
+                            avatar: participant.avatar || undefined,
                         })
                     );
                     const fixedMessages = conversation.messages.map(
                         message => ({
                             ...message,
                             user: {
-                                ...message.user,
-                                name: message.user.name ?? undefined,
+                                id: message.user.id,
+                                email: message.user.email,
+                                name: message.user.name || '',
+                                avatar: message.user.avatar || undefined,
                             },
                             conversation: {
                                 id: conversation.id,
@@ -190,7 +220,7 @@ export class DataLoaderService {
                                         id: true,
                                         email: true,
                                         name: true,
-                                        password: true,
+                                        avatar: true,
                                     },
                                 },
                             },
@@ -200,7 +230,7 @@ export class DataLoaderService {
                                 id: true,
                                 email: true,
                                 name: true,
-                                password: true,
+                                avatar: true,
                             },
                         },
                     },
@@ -218,15 +248,19 @@ export class DataLoaderService {
                     const fixedMessage = {
                         ...message,
                         user: {
-                            ...message.user,
-                            name: message.user.name ?? undefined,
+                            id: message.user.id,
+                            email: message.user.email,
+                            name: message.user.name || '',
+                            avatar: message.user.avatar || undefined,
                         },
                         conversation: {
                             ...message.conversation,
                             participants: message.conversation.participants.map(
                                 participant => ({
-                                    ...participant,
-                                    name: participant.name ?? undefined,
+                                    id: participant.id,
+                                    email: participant.email,
+                                    name: participant.name || '',
+                                    avatar: participant.avatar || undefined,
                                 })
                             ),
                             messages: [],
@@ -256,7 +290,7 @@ export class DataLoaderService {
                                         id: true,
                                         email: true,
                                         name: true,
-                                        password: true,
+                                        avatar: true,
                                     },
                                 },
                             },
@@ -266,7 +300,7 @@ export class DataLoaderService {
                                 id: true,
                                 email: true,
                                 name: true,
-                                password: true,
+                                avatar: true,
                             },
                         },
                     },
@@ -285,15 +319,19 @@ export class DataLoaderService {
                     const fixedMessage = {
                         ...message,
                         user: {
-                            ...message.user,
-                            name: message.user.name ?? undefined,
+                            id: message.user.id,
+                            email: message.user.email,
+                            name: message.user.name || '',
+                            avatar: message.user.avatar || undefined,
                         },
                         conversation: {
                             ...message.conversation,
                             participants: message.conversation.participants.map(
                                 participant => ({
-                                    ...participant,
-                                    name: participant.name ?? undefined,
+                                    id: participant.id,
+                                    email: participant.email,
+                                    name: participant.name || '',
+                                    avatar: participant.avatar || undefined,
                                 })
                             ),
                             messages: [],
@@ -335,8 +373,10 @@ export class DataLoaderService {
                     participantsByConversation.set(
                         conversation.id,
                         conversation.participants.map(participant => ({
-                            ...participant,
-                            name: participant.name || undefined,
+                            id: participant.id,
+                            email: participant.email,
+                            name: participant.name || '',
+                            avatar: participant.avatar || undefined,
                         }))
                     );
                 });

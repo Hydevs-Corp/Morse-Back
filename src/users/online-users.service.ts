@@ -31,18 +31,14 @@ export class OnlineUsersService implements OnModuleInit {
     setUserOnline(userId: string): void {
         console.log(`Setting user online: ${userId}`);
         this.onlineUsers.set(userId, new Date());
-        console.log(
-            `Current online users: ${Array.from(this.onlineUsers.keys()).join(', ')}`
-        );
+
         this.publishUpdate();
     }
 
     setUserOffline(userId: string): void {
         console.log(`Setting user offline: ${userId}`);
         this.onlineUsers.delete(userId);
-        console.log(
-            `Current online users: ${Array.from(this.onlineUsers.keys()).join(', ')}`
-        );
+
         this.publishUpdate();
     }
 
@@ -61,7 +57,6 @@ export class OnlineUsersService implements OnModuleInit {
 
     private publishUpdate(): void {
         const onlineList = this.getOnlineUsers();
-        console.log('Publishing online users update:', onlineList);
         this.pubSubService.publish('onlineUsersUpdated', {
             onlineUsersUpdated: { online: onlineList },
         });

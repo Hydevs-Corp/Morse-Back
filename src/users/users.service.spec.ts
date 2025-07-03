@@ -12,6 +12,7 @@ describe('UsersService', () => {
         email: 'test@example.com',
         name: 'Test User',
         password: 'hashedpassword',
+        avatar: ''
     };
 
     const mockPrismaService = {
