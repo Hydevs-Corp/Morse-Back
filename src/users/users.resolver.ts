@@ -98,7 +98,7 @@ export class UsersResolver {
     }
 
     @Mutation(() => User)
-    @UseGuards(GqlLocalAuthGuard)
+    @UseGuards(GqlAuthGuard)
     async updateUser(
         @Args('name') name: string,
         @CurrentUser() user: any
