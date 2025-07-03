@@ -33,6 +33,11 @@ jobs:
                       type=ref,event=pr
                       type=raw,value=latest,enable={{is_default_branch}}
 
+            - name: Uninstall unnecessary npm packages
+              run: |
+                  echo "Uninstalling jest-puppeteer and puppeteer..."
+                  npm uninstall jest-puppeteer puppeteer || exit 1
+
             - name: Build and push Docker image
               uses: docker/build-push-action@v5
               with:
@@ -113,4 +118,4 @@ jobs:
                   script: |
                       echo "Cleaning up old Docker images on remote server..."
                       docker image prune -af --filter "until=24h" || true
-                      docker system prune -f || true || exit 1
+                      docker system prune -f || true
