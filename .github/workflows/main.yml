@@ -86,7 +86,7 @@ jobs:
                       fi
                       docker run -d \
                           --name morse-back \
-                          -p 3000:3000 \
+                          -p 3001:3000 \
                           --restart unless-stopped \
                           --env-file /home/ubuntu/back/morse/.env \
                           $IMAGE_TAG || exit 1
