@@ -22,36 +22,37 @@ services:
             retries: 3
 
     morse-front:
-        image: morse-front:latest
+        image: angysquirrel/morse-front:latest
         container_name: morse-front
         ports:
-            - '80:80'
+            - '85:80'
         depends_on:
             - rabbitmq
             - morse-back
-        environment:
-            REACT_APP_RABBITMQ_URL: 'amqp://admin:admin123@rabbitmq:5672'
         networks:
             - morse-network
 
     morse-back:
-        build:
-            context: .
-            dockerfile: Dockerfile
+        image: angysquirrel/morse-back:latest
         container_name: morse-back
         ports:
-            - '3000:3000'
+            - '3001:3001'
         depends_on:
             - rabbitmq
         environment:
-            RABBITMQ_URL: 'amqp://admin:admin123@rabbitmq:5672'
-            DATABASE_URL: 'postgresql://user:password@db:5432/morse'
+            RABBITMQ_URL: 'amqp://admin:admin123@192.168.1.11:5672'
+            DATABASE_URL: 'file:./prisma/dev.db'
+            JWT_SECRET: '6f8e2b1c7a9d4e5f3c2b8a7e6d5c4b3a1f0e9d8c7b6a5e4d3c2b1a0f9e8d7c6'
+            CORS_ORIGIN: 'http://192.168.1.11:85'
+        volumes:
+            - morse-back-db:/app/prisma/dev.db
         restart: unless-stopped
         networks:
             - morse-network
 
 volumes:
     rabbitmq_data:
+    morse-back-db:
 
 networks:
     morse-network:

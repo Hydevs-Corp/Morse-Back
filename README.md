@@ -1,3 +1,13 @@
+# Quick Start
+
+If you want to start quickly, navigate to this repository and run the following command:
+
+```bash
+docker compose up
+```
+
+---
+
 # 🚀 Morse Back
 
 API backend GraphQL moderne pour l'application de chat en temps réel Morse, développée avec NestJS, TypeScript et Prisma. Support des WebSockets pour la communication en temps réel et intégration RabbitMQ pour la gestion des messages asynchrones.
