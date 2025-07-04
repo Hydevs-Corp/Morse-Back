@@ -84,17 +84,11 @@ jobs:
                           echo "Error: .env file was not created properly."
                           exit 1
                       fi
-
-                      echo "Creating persistent volume for dev.db..."
-                      docker volume create morse-back-db || exit 1
-
-                      echo "Mounting persistent volume for dev.db..."
                       docker run -d \
                           --name morse-back \
                           -p 3001:3001 \
                           --restart unless-stopped \
                           --env-file /home/ubuntu/back/morse/.env \
-                          -v morse-back-db:/app/prisma/dev.db \
                           $IMAGE_TAG || exit 1
 
                       echo "Waiting for container to stabilize..."

@@ -1,8 +1,11 @@
 import { NestFactory } from '@nestjs/core';
-import { AppModule } from './app.module';
-import { Transport, MicroserviceOptions } from '@nestjs/microservices';
+import { MicroserviceOptions, Transport } from '@nestjs/microservices';
+import { execSync } from 'child_process';
 import * as dotenv from 'dotenv';
+import { AppModule } from './app.module';
 dotenv.config();
+
+execSync('npx prisma migrate deploy', { stdio: 'inherit' });
 
 async function bootstrap() {
     const app = await NestFactory.create(AppModule);
