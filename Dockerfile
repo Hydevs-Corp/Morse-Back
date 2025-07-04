@@ -14,6 +14,5 @@ COPY --from=build /app/package*.json ./
 COPY --from=build /app/prisma ./prisma
 RUN npm install --only=production --legacy-peer-deps
 RUN npx prisma generate
-RUN npx prisma migrate deploy
 EXPOSE 3001
 CMD ["node", "dist/main.js"]
