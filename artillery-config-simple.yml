@@ -1,0 +1,442 @@
+config:
+    target: 'http://louisrvl.fr:3001'
+    phases:
+        # Test de montée en charge progressive
+        - duration: 30
+          arrivalRate: 1
+          rampTo: 3
+          name: 'Warm up'
+
+        # Charge soutenue
+        - duration: 60
+          arrivalRate: 3
+          name: 'Sustained load'
+
+        # Pic de charge léger
+        - duration: 20
+          arrivalRate: 6
+          name: 'Peak load'
+
+        # Descente
+        - duration: 20
+          arrivalRate: 3
+          rampTo: 1
+          name: 'Cool down'
+
+    payload:
+        path: './test-data.csv'
+        fields:
+            - email
+            - password
+            - name
+
+    plugins:
+        metrics-by-endpoint:
+            useOnlyRequestNames: true
+
+scenarios:
+    # 1. Test d'inscription utilisateur (signup)
+    - name: 'User Signup Flow'
+      weight: 20
+      flow:
+          - post:
+                url: '/graphql'
+                headers:
+                    Content-Type: 'application/json'
+                json:
+                    query: |
+                        mutation Signup($email: String!, $password: String!, $name: String!) {
+                          signup(email: $email, password: $password, name: $name) {
+                            user {
+                              id
+                              email
+                              name
+                              avatar
+                            }
+                            token
+                          }
+                        }
+                    variables:
+                        email: '{{ email }}'
+                        password: '{{ password }}'
+                        name: '{{ name }}'
+                expect:
+                    - statusCode: 200
+                    - hasProperty: 'data.signup.token'
+
+    # 2. Test de connexion utilisateur (signin)
+    - name: 'User Signin Flow'
+      weight: 25
+      flow:
+          - post:
+                url: '/graphql'
+                headers:
+                    Content-Type: 'application/json'
+                json:
+                    query: |
+                        mutation Signin($email: String!, $password: String!) {
+                          signin(email: $email, password: $password)
+                        }
+                    variables:
+                        email: '{{ email }}'
+                        password: '{{ password }}'
+                expect:
+                    - statusCode: 200
+                    - hasProperty: 'data.signin'
+
+          # Test récupération du profil utilisateur
+          - post:
+                url: '/graphql'
+                name: 'getUserProfile'
+                headers:
+                    Content-Type: 'application/json'
+                    Authorization: 'Bearer {{ authToken }}'
+                json:
+                    query: |
+                        query Me {
+                          me {
+                            id
+                            email
+                            name
+                            avatar
+                          }
+                        }
+                expect:
+                    - statusCode: 200
+                    - hasProperty: 'data.me'
+
+    # 3. Test de gestion des conversations
+    - name: 'Conversation Management'
+      weight: 25
+      flow:
+          # Authentification
+          - post:
+                url: '/graphql'
+                headers:
+                    Content-Type: 'application/json'
+                json:
+                    query: |
+                        mutation Signin($email: String!, $password: String!) {
+                          signin(email: $email, password: $password)
+                        }
+                    variables:
+                        email: '{{ email }}'
+                        password: '{{ password }}'
+                expect:
+                    - statusCode: 200
+
+          # Récupération des conversations de l'utilisateur
+          - post:
+                url: '/graphql'
+                name: 'getMyConversations'
+                headers:
+                    Content-Type: 'application/json'
+                    Authorization: 'Bearer {{ authToken }}'
+                json:
+                    query: |
+                        query GetMyConversations {
+                          getMyConversations {
+                            id
+                            name
+                            createdAt
+                            participants {
+                              id
+                              email
+                              name
+                            }
+                          }
+                        }
+                expect:
+                    - statusCode: 200
+
+          # Création d'une nouvelle conversation (si possible)
+          - post:
+                url: '/graphql'
+                name: 'createConversation'
+                headers:
+                    Content-Type: 'application/json'
+                    Authorization: 'Bearer {{ authToken }}'
+                json:
+                    query: |
+                        mutation CreateConversation($participantIds: [Int!]!, $name: String) {
+                          createConversation(participantIds: $participantIds, name: $name) {
+                            id
+                            name
+                            participants {
+                              id
+                              email
+                            }
+                          }
+                        }
+                    variables:
+                        participantIds: [1]
+                        name: 'Test Conversation'
+                expect:
+                    - statusCode: 200
+
+    # 4. Test d'envoi de messages
+    - name: 'Message Sending Flow'
+      weight: 20
+      flow:
+          # Authentification
+          - post:
+                url: '/graphql'
+                headers:
+                    Content-Type: 'application/json'
+                json:
+                    query: |
+                        mutation Signin($email: String!, $password: String!) {
+                          signin(email: $email, password: $password)
+                        }
+                    variables:
+                        email: '{{ email }}'
+                        password: '{{ password }}'
+                expect:
+                    - statusCode: 200
+
+          # Récupération des conversations pour avoir un ID valide
+          - post:
+                url: '/graphql'
+                headers:
+                    Content-Type: 'application/json'
+                    Authorization: 'Bearer {{ authToken }}'
+                json:
+                    query: |
+                        query GetMyConversations {
+                          getMyConversations {
+                            id
+                          }
+                        }
+                expect:
+                    - statusCode: 200
+
+          # Envoi de messages en boucle
+          - loop:
+                - post:
+                      url: '/graphql'
+                      name: 'sendMessage'
+                      headers:
+                          Content-Type: 'application/json'
+                          Authorization: 'Bearer {{ authToken }}'
+                      json:
+                          query: |
+                              mutation SendMessage($conversationId: Int!, $content: String!) {
+                                sendMessage(conversationId: $conversationId, content: $content) {
+                                  id
+                                  content
+                                  createdAt
+                                  user {
+                                    id
+                                    email
+                                    name
+                                  }
+                                  conversation {
+                                    id
+                                  }
+                                }
+                              }
+                          variables:
+                              conversationId: '{{ conversationId }}'
+                              content: 'Test message from Artillery load test'
+                      expect:
+                          - statusCode: 200
+            count: 2
+
+    # 5. Test de récupération de données
+    - name: 'Data Retrieval Flow'
+      weight: 15
+      flow:
+          # Authentification
+          - post:
+                url: '/graphql'
+                headers:
+                    Content-Type: 'application/json'
+                json:
+                    query: |
+                        mutation Signin($email: String!, $password: String!) {
+                          signin(email: $email, password: $password)
+                        }
+                    variables:
+                        email: '{{ email }}'
+                        password: '{{ password }}'
+                expect:
+                    - statusCode: 200
+
+          # Récupération de tous les messages
+          - post:
+                url: '/graphql'
+                name: 'getAllMessages'
+                headers:
+                    Content-Type: 'application/json'
+                    Authorization: 'Bearer {{ authToken }}'
+                json:
+                    query: |
+                        query GetMessages {
+                          messages {
+                            id
+                            content
+                            createdAt
+                            user {
+                              id
+                              email
+                              name
+                            }
+                            conversation {
+                              id
+                              name
+                            }
+                          }
+                        }
+                expect:
+                    - statusCode: 200
+
+          # Récupération de tous les utilisateurs
+          - post:
+                url: '/graphql'
+                name: 'getAllUsers'
+                headers:
+                    Content-Type: 'application/json'
+                    Authorization: 'Bearer {{ authToken }}'
+                json:
+                    query: |
+                        query GetUsers {
+                          users {
+                            id
+                            email
+                            name
+                            avatar
+                          }
+                        }
+                expect:
+                    - statusCode: 200
+
+          # Test des utilisateurs en ligne
+          - post:
+                url: '/graphql'
+                name: 'getOnlineUsers'
+                headers:
+                    Content-Type: 'application/json'
+                    Authorization: 'Bearer {{ authToken }}'
+                json:
+                    query: |
+                        query GetOnlineUsers {
+                          getOnlineUsers {
+                            online {
+                              userId
+                              lastConnection
+                            }
+                          }
+                        }
+                expect:
+                    - statusCode: 200
+
+    # 6. Tests de gestion d'erreurs et de sécurité
+    - name: 'Error Handling & Security'
+      weight: 10
+      flow:
+          # Test avec token invalide
+          - post:
+                url: '/graphql'
+                name: 'invalidTokenTest'
+                headers:
+                    Content-Type: 'application/json'
+                    Authorization: 'Bearer invalid-jwt-token-string'
+                json:
+                    query: |
+                        query Me {
+                          me {
+                            id
+                            email
+                          }
+                        }
+                expect:
+                    - statusCode: 200
+
+          # Test avec credentials invalides
+          - post:
+                url: '/graphql'
+                name: 'invalidCredentials'
+                headers:
+                    Content-Type: 'application/json'
+                json:
+                    query: |
+                        mutation Signin($email: String!, $password: String!) {
+                          signin(email: $email, password: $password)
+                        }
+                    variables:
+                        email: 'nonexistent@example.com'
+                        password: 'wrongpassword123'
+                expect:
+                    - statusCode: 200
+
+          # Test d'accès sans authentification
+          - post:
+                url: '/graphql'
+                name: 'unauthenticatedAccess'
+                headers:
+                    Content-Type: 'application/json'
+                json:
+                    query: |
+                        mutation SetUserOnline {
+                          setUserOnline
+                        }
+                expect:
+                    - statusCode: 200
+
+    # 7. Test des fonctionnalités utilisateur avancées
+    - name: 'Advanced User Features'
+      weight: 5
+      flow:
+          # Authentification
+          - post:
+                url: '/graphql'
+                headers:
+                    Content-Type: 'application/json'
+                json:
+                    query: |
+                        mutation Signin($email: String!, $password: String!) {
+                          signin(email: $email, password: $password)
+                        }
+                    variables:
+                        email: '{{ email }}'
+                        password: '{{ password }}'
+                expect:
+                    - statusCode: 200
+
+          # Mise à jour du profil utilisateur
+          - post:
+                url: '/graphql'
+                name: 'updateUserProfile'
+                headers:
+                    Content-Type: 'application/json'
+                    Authorization: 'Bearer {{ authToken }}'
+                json:
+                    query: |
+                        mutation UpdateUser($name: String!, $avatar: String) {
+                          updateUser(name: $name, avatar: $avatar) {
+                            id
+                            email
+                            name
+                            avatar
+                          }
+                        }
+                    variables:
+                        name: 'Updated Test User'
+                        avatar: null
+                expect:
+                    - statusCode: 200
+
+          # Définir l'utilisateur en ligne
+          - post:
+                url: '/graphql'
+                name: 'setUserOnline'
+                headers:
+                    Content-Type: 'application/json'
+                    Authorization: 'Bearer {{ authToken }}'
+                json:
+                    query: |
+                        mutation SetUserOnline {
+                          setUserOnline
+                        }
+                expect:
+                    - statusCode: 200

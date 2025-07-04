@@ -1,5 +1,10 @@
 module.exports = {
     generateRandomEmail: function (context, events, done) {
+        // Ensure context.vars exists
+        if (!context.vars) {
+            context.vars = {};
+        }
+
         const timestamp = Date.now();
         const random = Math.floor(Math.random() * 10000);
         context.vars.email = `test${timestamp}${random}@example.com`;
@@ -9,9 +14,9 @@ module.exports = {
     },
 
     logResponseTime: function (requestParams, response, context, ee, next) {
-        if (response.body && response.body.data) {
+        if (response && response.body && response.body.data) {
             console.log(
-                `Request: ${requestParams.name || 'unknown'}, Response Time: ${response.timings.response}ms`
+                `Request: ${requestParams.name || 'unknown'}, Response Time: ${response.timings ? response.timings.response : 'unknown'}ms`
             );
         }
         return next();
@@ -23,7 +28,11 @@ module.exports = {
     },
 
     assertResponseTime: function (requestParams, response, context, ee, next) {
-        if (requestParams.name === 'sendMessage') {
+        if (
+            requestParams.name === 'sendMessage' &&
+            response &&
+            response.timings
+        ) {
             if (response.timings.response > 500) {
                 console.warn(
                     `WARNING: sendMessage took ${response.timings.response}ms (expected < 500ms)`
@@ -34,6 +43,11 @@ module.exports = {
     },
 
     generateTestMessage: function (context, events, done) {
+        // Ensure context.vars exists
+        if (!context.vars) {
+            context.vars = {};
+        }
+
         const messages = [
             'Hello from performance test!',
             'Testing message sending speed',
@@ -80,17 +94,22 @@ module.exports = {
             };
         }
 
-        const responseTime = response.timings.response;
+        if (response && response.timings && response.timings.response) {
+            const responseTime = response.timings.response;
 
-        if (requestParams.name === 'sendMessage') {
-            global.performanceMetrics.sendMessageTimes.push(responseTime);
-        } else if (requestParams.url && requestParams.url.includes('signin')) {
-            global.performanceMetrics.authTimes.push(responseTime);
+            if (requestParams.name === 'sendMessage') {
+                global.performanceMetrics.sendMessageTimes.push(responseTime);
+            } else if (
+                requestParams.url &&
+                requestParams.url.includes('signin')
+            ) {
+                global.performanceMetrics.authTimes.push(responseTime);
+            }
         }
 
         if (
-            response.statusCode >= 400 ||
-            (response.body && response.body.errors)
+            (response && response.statusCode >= 400) ||
+            (response && response.body && response.body.errors)
         ) {
             global.performanceMetrics.errors++;
         }
@@ -121,5 +140,14 @@ module.exports = {
         }
 
         return done();
+    },
+
+    logResponse: function (requestParams, response, context, ee, next) {
+        console.log('\n=== DEBUG RESPONSE ===');
+        console.log(`URL: ${requestParams.url}`);
+        console.log(`Status: ${response.statusCode}`);
+        console.log(`Body:`, JSON.stringify(response.body, null, 2));
+        console.log('======================\n');
+        return next();
     },
 };

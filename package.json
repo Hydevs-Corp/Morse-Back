@@ -20,7 +20,7 @@
         "test:e2e": "NODE_ENV=test jest --config ./test/jest-e2e.json",
         "test:unit": "NODE_ENV=test jest --testPathPattern=src/.*\\.spec\\.ts$",
         "test:integration": "NODE_ENV=test jest --testPathPattern=.*\\.integration\\.spec\\.ts$",
-        "test:performance": "artillery run artillery-config.yml",
+        "test:performance": "artillery run artillery-config-simple.yml --record --key a9_g4p6r9lb26ikde7syfz1rfd17ymva2hh",
         "test:performance:quick": "artillery quick --count 10 --num 5 http://localhost:3001/graphql",
         "test:puppeteer": "jest --config ./test/jest-puppeteer.json",
         "test:all": "npm run test:unit && npm run test:integration && npm run test:e2e",
