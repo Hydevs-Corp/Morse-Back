@@ -18,6 +18,7 @@ describe('RabbitMQ Service Integration', () => {
         email: 'test@example.com',
         name: 'Test User',
         password: 'hashedpassword',
+        avatar: 'http://example.com/avatar.png',
     };
 
     const mockConversation: Conversation = {
